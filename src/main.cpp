@@ -3,9 +3,12 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
+#include <vector>
 
 #include "Camera.h"
 #include "Shader.h"
+
+#include "PerlinNoise.hpp"
 
 namespace {
     int width = 1280;
@@ -25,14 +28,15 @@ void framebufferSizeCallback(GLFWwindow*, int w, int h) {
 
 void mouseCallback(GLFWwindow*, double xpos, double ypos) {
     if (firstMouse) {
-        lastX = (float)xpos;
-        lastY = (float)ypos;
+        lastX = xpos;
+        lastY = ypos;
         firstMouse = false;
     }
-    float dx = (float)xpos - lastX;
-    float dy = lastY - (float)ypos;  // y ide odozdo nagore
-    lastX = (float)xpos;
-    lastY = (float)ypos;
+
+    float dx = xpos - lastX;
+    float dy = lastY - ypos;
+    lastX = xpos;
+    lastY = ypos;
     camera.rotate(dx, dy);
 }
 
@@ -64,6 +68,7 @@ int main() {
         glfwTerminate();
         return -1;
     }
+
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 
@@ -105,6 +110,22 @@ int main() {
          0.5f, 0.5f, 0.5f,  0, 1, 0,  -0.5f, 0.5f, 0.5f,  0, 1, 0,  -0.5f, 0.5f,-0.5f,  0, 1, 0,
     };
 
+    const siv::PerlinNoise::seed_type seed = 123u;
+    
+    const siv::PerlinNoise perlin(seed);
+
+    std::vector<glm::vec3> cubePositions;
+
+    for (int y = -50; y < 50; ++y) {
+        for (int x = -50; x < 50; ++x) {
+            int height = perlin.octave2D_01(x * 0.1f, y * 0.1f, 4, 0.5f) * 10.0f;
+
+            for (int z = 0; z < height; ++z) {
+                cubePositions.push_back(glm::vec3(x, z, y));
+            }
+        }
+    }
+
     GLuint vao, vbo;
     glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
@@ -136,14 +157,21 @@ int main() {
             glm::radians(60.0f), (float)width / (float)height, 0.1f, 1000.0f);
 
         shader.use();
-        shader.setMat4("model", model);
         shader.setMat4("view", view);
         shader.setMat4("projection", projection);
         shader.setVec3("lightDir", glm::normalize(glm::vec3(-0.5f, -1.0f, -0.3f)));
-        shader.setVec3("objectColor", glm::vec3(1.0f, 0.5f, 0.2f));
 
         glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        for (const glm::vec3& pos : cubePositions) {
+            glm::mat4 model(1.0f);
+            model = glm::translate(model, pos);
+
+            shader.setMat4("model", model);
+            shader.setVec3("objectColor", glm::vec3(1.0f, 0.5f, 0.2f));
+
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -152,5 +180,6 @@ int main() {
     glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
     glfwTerminate();
+
     return 0;
 }

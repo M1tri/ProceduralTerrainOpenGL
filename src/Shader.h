@@ -59,11 +59,13 @@ private:
 
         GLint ok;
         glGetShaderiv(s, GL_COMPILE_STATUS, &ok);
+        
         if (!ok) {
             char log[1024];
             glGetShaderInfoLog(s, 1024, nullptr, log);
             std::cerr << "Greška u shaderu " << name << ":\n" << log << "\n";
         }
+
         return s;
     }
 };
