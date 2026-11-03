@@ -4,9 +4,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 #include <vector>
+#include <memory>
 
 #include "Camera.h"
 #include "Shader.h"
+#include "Chunk.h"
 
 #include "PerlinNoise.hpp"
 
@@ -14,7 +16,7 @@ namespace {
     int width = 1280;
     int height = 720;
 
-    Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+    Camera camera(glm::vec3(0.0f, 150.0f, 3.0f));
     float lastX = width / 2.0f;
     float lastY = height / 2.0f;
     bool firstMouse = true;
@@ -88,57 +90,20 @@ int main() {
     Shader shader(std::string(SHADER_DIR) + "basic.vert",
                   std::string(SHADER_DIR) + "basic.frag");
 
-    // Kocka: pozicija (3) + normala (3) po verteksu
-    float vertices[] = {
-        // zadnja strana
-        -0.5f,-0.5f,-0.5f,  0, 0,-1,   0.5f,-0.5f,-0.5f,  0, 0,-1,   0.5f, 0.5f,-0.5f,  0, 0,-1,
-         0.5f, 0.5f,-0.5f,  0, 0,-1,  -0.5f, 0.5f,-0.5f,  0, 0,-1,  -0.5f,-0.5f,-0.5f,  0, 0,-1,
-        // prednja strana
-        -0.5f,-0.5f, 0.5f,  0, 0, 1,   0.5f,-0.5f, 0.5f,  0, 0, 1,   0.5f, 0.5f, 0.5f,  0, 0, 1,
-         0.5f, 0.5f, 0.5f,  0, 0, 1,  -0.5f, 0.5f, 0.5f,  0, 0, 1,  -0.5f,-0.5f, 0.5f,  0, 0, 1,
-        // leva strana
-        -0.5f, 0.5f, 0.5f, -1, 0, 0,  -0.5f, 0.5f,-0.5f, -1, 0, 0,  -0.5f,-0.5f,-0.5f, -1, 0, 0,
-        -0.5f,-0.5f,-0.5f, -1, 0, 0,  -0.5f,-0.5f, 0.5f, -1, 0, 0,  -0.5f, 0.5f, 0.5f, -1, 0, 0,
-        // desna strana
-         0.5f, 0.5f, 0.5f,  1, 0, 0,   0.5f, 0.5f,-0.5f,  1, 0, 0,   0.5f,-0.5f,-0.5f,  1, 0, 0,
-         0.5f,-0.5f,-0.5f,  1, 0, 0,   0.5f,-0.5f, 0.5f,  1, 0, 0,   0.5f, 0.5f, 0.5f,  1, 0, 0,
-        // donja strana
-        -0.5f,-0.5f,-0.5f,  0,-1, 0,   0.5f,-0.5f,-0.5f,  0,-1, 0,   0.5f,-0.5f, 0.5f,  0,-1, 0,
-         0.5f,-0.5f, 0.5f,  0,-1, 0,  -0.5f,-0.5f, 0.5f,  0,-1, 0,  -0.5f,-0.5f,-0.5f,  0,-1, 0,
-        // gornja strana
-        -0.5f, 0.5f,-0.5f,  0, 1, 0,   0.5f, 0.5f,-0.5f,  0, 1, 0,   0.5f, 0.5f, 0.5f,  0, 1, 0,
-         0.5f, 0.5f, 0.5f,  0, 1, 0,  -0.5f, 0.5f, 0.5f,  0, 1, 0,  -0.5f, 0.5f,-0.5f,  0, 1, 0,
-    };
-
     const siv::PerlinNoise::seed_type seed = 123u;
-    
     const siv::PerlinNoise perlin(seed);
 
-    std::vector<glm::vec3> cubePositions;
-
-    for (int y = -50; y < 50; ++y) {
-        for (int x = -50; x < 50; ++x) {
-            int height = perlin.octave2D_01(x * 0.1f, y * 0.1f, 4, 0.5f) * 10.0f;
-
-            for (int z = 0; z < height; ++z) {
-                cubePositions.push_back(glm::vec3(x, z, y));
-            }
+    std::vector<std::unique_ptr<Chunk>> chunks;
+    for (int cz = -4; cz < 4; ++cz) {
+        for (int cx = -4; cx < 4; ++cx) {
+            auto chunk = std::make_unique<Chunk>(cx, cz);
+            chunk->generate(perlin);
+            chunk->buildMesh();
+            chunks.push_back(std::move(chunk));
         }
     }
 
-    GLuint vao, vbo;
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
+    camera.speed = 30.0f;
     float lastFrame = 0.0f;
 
     while (!glfwWindowShouldClose(window)) {
@@ -160,25 +125,18 @@ int main() {
         shader.setMat4("view", view);
         shader.setMat4("projection", projection);
         shader.setVec3("lightDir", glm::normalize(glm::vec3(-0.5f, -1.0f, -0.3f)));
+        shader.setVec3("objectColor", glm::vec3(0.45f, 0.30f, 0.18f));
 
-        glBindVertexArray(vao);
-
-        for (const glm::vec3& pos : cubePositions) {
-            glm::mat4 model(1.0f);
-            model = glm::translate(model, pos);
-
-            shader.setMat4("model", model);
-            shader.setVec3("objectColor", glm::vec3(1.0f, 0.5f, 0.2f));
-
-            glDrawArrays(GL_TRIANGLES, 0, 36);
+        for (const auto& chunk : chunks) {
+            shader.setMat4("model", glm::translate(glm::mat4(1.0f), chunk->worldOffset()));
+            chunk->draw();
         }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    glDeleteVertexArrays(1, &vao);
-    glDeleteBuffers(1, &vbo);
+    chunks.clear(); 
     glfwTerminate();
 
     return 0;

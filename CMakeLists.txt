@@ -9,7 +9,9 @@ find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(GLEW REQUIRED)
 
-add_executable(${PROJECT_NAME} src/main.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp src/Chunk.cpp)
+
+target_include_directories(${PROJECT_NAME} PRIVATE ThirdParty/PerlinNoise)
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     SHADER_DIR="${CMAKE_SOURCE_DIR}/shaders/")

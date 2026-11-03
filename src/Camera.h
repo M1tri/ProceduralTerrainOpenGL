@@ -1,18 +1,21 @@
 #pragma once
+
+#include <GL/glew.h>
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+
+constexpr float SPEED = 3.0f;
 
 enum class CameraMove { Forward, Backward, Left, Right, Up, Down };
 
 class Camera {
 public:
     glm::vec3 position;
-    glm::vec3 front{0.0f, 0.0f, -1.0f};
-    glm::vec3 up{0.0f, 1.0f, 0.0f};
-    glm::vec3 right{1.0f, 0.0f, 0.0f};
+    glm::vec3 front{0.0f, 0.0f, -SPEED};
+    glm::vec3 up{0.0f, SPEED, 0.0f};
+    glm::vec3 right{SPEED, 0.0f, 0.0f};
     float yaw = -90.0f;
     float pitch = 0.0f;
-    float speed = 3.0f;
+    float speed = SPEED;
     float sensitivity = 0.1f;
 
     explicit Camera(glm::vec3 pos = glm::vec3(0.0f, 0.0f, 3.0f)) : position(pos) {
