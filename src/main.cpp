@@ -9,6 +9,7 @@
 #include "Camera.h"
 #include "Shader.h"
 #include "Chunk.h"
+#include "World.h"
 
 #include "PerlinNoise.hpp"
 
@@ -54,7 +55,7 @@ void processInput(GLFWwindow* window, float dt) {
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) camera.move(CameraMove::Down, dt);
 }
 
-int main() {
+int main(int argc, char** argv) {
     if (!glfwInit()) {
         std::cerr << "GLFW init nije uspeo\n";
         return -1;
@@ -93,15 +94,7 @@ int main() {
     const siv::PerlinNoise::seed_type seed = 123u;
     const siv::PerlinNoise perlin(seed);
 
-    std::vector<std::unique_ptr<Chunk>> chunks;
-    for (int cz = -4; cz < 4; ++cz) {
-        for (int cx = -4; cx < 4; ++cx) {
-            auto chunk = std::make_unique<Chunk>(cx, cz);
-            chunk->generate(perlin);
-            chunk->buildMesh();
-            chunks.push_back(std::move(chunk));
-        }
-    }
+    World world(seed);
 
     camera.speed = 30.0f;
     float lastFrame = 0.0f;
@@ -113,10 +106,11 @@ int main() {
 
         processInput(window, dt);
 
+        world.update(camera.getPosition());
+
         glClearColor(0.1f, 0.2f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glm::mat4 model(1.0f);
         glm::mat4 view = camera.viewMatrix();
         glm::mat4 projection = glm::perspective(
             glm::radians(60.0f), (float)width / (float)height, 0.1f, 1000.0f);
@@ -126,17 +120,13 @@ int main() {
         shader.setMat4("projection", projection);
         shader.setVec3("lightDir", glm::normalize(glm::vec3(-0.5f, -1.0f, -0.3f)));
         shader.setVec3("objectColor", glm::vec3(0.45f, 0.30f, 0.18f));
-
-        for (const auto& chunk : chunks) {
-            shader.setMat4("model", glm::translate(glm::mat4(1.0f), chunk->worldOffset()));
-            chunk->draw();
-        }
+        world.draw(shader);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    chunks.clear(); 
+    world.clear(); 
     glfwTerminate();
 
     return 0;

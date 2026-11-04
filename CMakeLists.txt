@@ -9,7 +9,7 @@ find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(GLEW REQUIRED)
 
-add_executable(${PROJECT_NAME} src/main.cpp src/Chunk.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp src/Chunk.cpp src/World.cpp)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ThirdParty/PerlinNoise)
 

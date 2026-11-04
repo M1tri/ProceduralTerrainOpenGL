@@ -26,6 +26,10 @@ public:
         return glm::lookAt(position, position + front, up);
     }
 
+    const glm::vec3& getPosition() const {
+        return position;
+    }
+
     void move(CameraMove dir, float dt) {
         float v = speed * dt;
         switch (dir) {

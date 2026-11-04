@@ -102,6 +102,7 @@ void Chunk::generate(const siv::PerlinNoise& noise)
             //int height = noise.octave2D_01((this->x * Chunk::CHUNK_SIZE + x) * 0.1f, (this->z * Chunk::CHUNK_SIZE + z) * 0.1f, 4, 0.5f) * Chunk::CHUNK_HEIGHT;
 
             double n = noise.octave2D_01((this->x * CHUNK_SIZE + x) * 0.01, (this->z * CHUNK_SIZE + z) * 0.01, 4, 0.5);
+            n = n*n;
             int height = 40 + (int)(n * 60);
 
             for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {

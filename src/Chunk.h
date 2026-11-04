@@ -15,9 +15,12 @@ enum class BLOCK_TYPE : uint8_t {
 };
 
 class Chunk {
+
+public:
     constexpr static int CHUNK_SIZE = 16;
     constexpr static int CHUNK_HEIGHT = 256;
 
+private:
     int x;
     int z;
 
